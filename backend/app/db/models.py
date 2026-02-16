@@ -1,0 +1,165 @@
+from sqlalchemy import Column, Integer, String, Boolean, Text, ForeignKey, DateTime, Enum, JSON
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from datetime import datetime
+import enum
+from app.db.database import Base
+
+
+class UserRole(str, enum.Enum):
+    GUEST = "guest"
+    USER = "user"
+    ADMIN = "admin"
+
+
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    username = Column(String, unique=True, index=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    is_active = Column(Boolean, default=True)
+    
+    # Relationships
+    level_progress = relationship("LevelProgress", back_populates="user", cascade="all, delete-orphan")
+    notes = relationship("Note", back_populates="user", cascade="all, delete-orphan")
+    highlights = relationship("Highlight", back_populates="user", cascade="all, delete-orphan")
+    messages = relationship("Message", back_populates="user", cascade="all, delete-orphan")
+
+
+class Level(Base):
+    __tablename__ = "levels"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text)
+    narrative = Column(Text, nullable=False)  # Предыстория для брифинга
+    order = Column(Integer, nullable=False, unique=True)
+    difficulty = Column(Integer, default=1)
+    
+    # Игровая карта (JSON структура)
+    map_data = Column(JSON, nullable=False)
+    
+    # Золотой эталон - идеальное решение
+    golden_code = Column(Text, nullable=False)
+    golden_steps_count = Column(Integer, nullable=False)
+    
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    is_active = Column(Boolean, default=True)
+    
+    # Relationships
+    level_progress = relationship("LevelProgress", back_populates="level", cascade="all, delete-orphan")
+    messages = relationship("Message", back_populates="level", cascade="all, delete-orphan")
+    notes = relationship("Note", back_populates="level")
+    highlights = relationship("Highlight", back_populates="level")
+
+
+class LevelProgress(Base):
+    __tablename__ = "level_progress"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    level_id = Column(Integer, ForeignKey("levels.id"), nullable=False)
+    
+    completed = Column(Boolean, default=False)
+    steps_count = Column(Integer)  # Количество шагов в решении игрока
+    user_code = Column(Text)  # Код игрока
+    
+    attempts = Column(Integer, default=0)
+    best_steps_count = Column(Integer)  # Лучший результат
+    
+    completed_at = Column(DateTime)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    user = relationship("User", back_populates="level_progress")
+    level = relationship("Level", back_populates="level_progress")
+
+
+class NoteType(str, enum.Enum):
+    HIGHLIGHT = "highlight"
+    CUSTOM = "custom"
+    TEMPLATE = "template"
+
+
+class Note(Base):
+    __tablename__ = "notes"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    level_id = Column(Integer, ForeignKey("levels.id"))
+    
+    content = Column(Text, nullable=False)
+    type = Column(Enum(NoteType), default=NoteType.CUSTOM)
+    
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    user = relationship("User", back_populates="notes")
+    level = relationship("Level", back_populates="notes")
+
+
+class HighlightColor(str, enum.Enum):
+    RED = "red"
+    YELLOW = "yellow"
+    GREEN = "green"
+
+
+class Highlight(Base):
+    __tablename__ = "highlights"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    level_id = Column(Integer, ForeignKey("levels.id"), nullable=False)
+    
+    text_fragment = Column(Text, nullable=False)
+    color = Column(Enum(HighlightColor), default=HighlightColor.YELLOW)
+    
+    # Позиция в тексте для точного восстановления выделения
+    char_start = Column(Integer, nullable=False)
+    char_end = Column(Integer, nullable=False)
+    
+    created_at = Column(DateTime, default=func.now())
+    
+    # Relationships
+    user = relationship("User", back_populates="highlights")
+    level = relationship("Level", back_populates="highlights")
+
+
+class Message(Base):
+    __tablename__ = "messages"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    level_id = Column(Integer, ForeignKey("levels.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    content = Column(Text, nullable=False)
+    is_spoiler = Column(Boolean, default=False)  # Сообщение помечено как спойлер
+    
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    is_deleted = Column(Boolean, default=False)
+    
+    # Relationships
+    user = relationship("User", back_populates="messages")
+    level = relationship("Level", back_populates="messages")
+
+
+class News(Base):
+    __tablename__ = "news"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    content = Column(Text, nullable=False)
+    author_id = Column(Integer, ForeignKey("users.id"))
+    
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    is_published = Column(Boolean, default=False)

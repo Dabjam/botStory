@@ -1,0 +1,122 @@
+.admin-panel {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.admin-panel h1 {
+  font-size: 2.5rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.level-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.form-section {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 2rem;
+}
+
+.form-section h2 {
+  margin-bottom: 1.5rem;
+  color: #646cff;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-family: inherit;
+}
+
+.form-group textarea {
+  resize: vertical;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.map-editor {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+.map-row {
+  display: flex;
+  gap: 4px;
+}
+
+.map-cell {
+  width: 80px;
+  height: 40px;
+  padding: 0.25rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.map-cell.empty {
+  background: #3a3a3a;
+}
+
+.map-cell.wall {
+  background: #1a1a1a;
+  color: white;
+}
+
+.map-cell.trap {
+  background: #8b0000;
+  color: white;
+}
+
+.map-cell.start {
+  background: #00ff00;
+  color: black;
+}
+
+.map-cell.finish {
+  background: #ffd700;
+  color: black;
+}
+
+.submit-btn {
+  padding: 1rem 2rem;
+  font-size: 1.2rem;
+  background: #646cff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.submit-btn:hover {
+  background: #535bf2;
+  transform: translateY(-2px);
+}

@@ -1,0 +1,90 @@
+import axios from 'axios'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
+export const api = axios.create({
+  baseURL: `${API_URL}/api/v1`,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+
+// Add auth token to requests
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// Auth API
+export const authAPI = {
+  register: (data: { email: string; username: string; password: string }) =>
+    api.post('/auth/register', data),
+  
+  login: (email: string, password: string) =>
+    api.post('/auth/login', new URLSearchParams({ username: email, password }), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    }),
+}
+
+// User API
+export const userAPI = {
+  getProfile: () => api.get('/users/me'),
+  updateProfile: (data: any) => api.patch('/users/me', data),
+}
+
+// Level API
+export const levelAPI = {
+  getAll: () => api.get('/levels'),
+  getById: (id: number) => api.get(`/levels/${id}`),
+  getProgress: (id: number) => api.get(`/levels/${id}/progress`),
+  submitSolution: (id: number, data: { user_code: string; steps_count: number }) =>
+    api.post(`/levels/${id}/progress`, { level_id: id, ...data }),
+  
+  // Admin
+  create: (data: any) => api.post('/levels', data),
+  update: (id: number, data: any) => api.patch(`/levels/${id}`, data),
+  delete: (id: number) => api.delete(`/levels/${id}`),
+}
+
+// Execute API
+export const executeAPI = {
+  executeCode: (level_id: number, code: string) =>
+    api.post('/execute', { level_id, code }),
+  test: () => api.get('/execute/test'),
+}
+
+// Notes API
+export const notesAPI = {
+  getAll: (level_id?: number) => api.get('/notes', { params: { level_id } }),
+  create: (data: any) => api.post('/notes', data),
+  update: (id: number, data: any) => api.patch(`/notes/${id}`, data),
+  delete: (id: number) => api.delete(`/notes/${id}`),
+}
+
+// Highlights API
+export const highlightsAPI = {
+  getForLevel: (level_id: number) => api.get(`/highlights/level/${level_id}`),
+  create: (data: any) => api.post('/highlights', data),
+  delete: (id: number) => api.delete(`/highlights/${id}`),
+}
+
+// Messages API
+export const messagesAPI = {
+  getForLevel: (level_id: number) => api.get(`/messages/level/${level_id}`),
+  create: (data: { level_id: number; content: string }) => api.post('/messages', data),
+  delete: (id: number) => api.delete(`/messages/${id}`),
+}
+
+// News API
+export const newsAPI = {
+  getAll: () => api.get('/news'),
+  getById: (id: number) => api.get(`/news/${id}`),
+  
+  // Admin
+  create: (data: any) => api.post('/news', data),
+  update: (id: number, data: any) => api.patch(`/news/${id}`, data),
+  delete: (id: number) => api.delete(`/news/${id}`),
+}
