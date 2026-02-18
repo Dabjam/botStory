@@ -57,7 +57,7 @@ export default function Debriefing({ levelId, result, goldenSteps, onClose, onRe
             onClick={() => navigate(`/level/${levelId}/play`)} 
             className="btn-chat"
           >
-            Обсудить в чате
+            К миссии (чат)
           </button>
           <button onClick={onClose} className="btn-next">
             К уровням

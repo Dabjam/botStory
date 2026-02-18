@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { levelAPI, highlightsAPI } from '../services/api'
 import './Briefing.css'
@@ -12,6 +12,7 @@ interface Level {
 export default function Briefing() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const narrativeRef = useRef<HTMLDivElement>(null)
   const [level, setLevel] = useState<Level | null>(null)
   const [highlights, setHighlights] = useState<any[]>([])
   const [selectedColor, setSelectedColor] = useState('yellow')
@@ -30,14 +31,21 @@ export default function Briefing() {
 
   const handleTextSelection = () => {
     const selection = window.getSelection()
-    if (!selection || selection.toString().length === 0) return
+    if (!selection || selection.toString().trim().length === 0) return
+    
+    const narrativeEl = narrativeRef.current
+    if (!narrativeEl) return
     
     const range = selection.getRangeAt(0)
-    const selectedText = selection.toString()
+    if (!range.intersectsNode(narrativeEl)) return
     
-    // In a real app, calculate char_start and char_end properly
-    const char_start = 0
-    const char_end = selectedText.length
+    const selectedText = selection.toString().trim()
+    const preRange = document.createRange()
+    preRange.selectNodeContents(narrativeEl)
+    preRange.setEnd(range.startContainer, range.startOffset)
+    const char_start = preRange.toString().length
+    preRange.setEnd(range.endContainer, range.endOffset)
+    const char_end = preRange.toString().length
     
     highlightsAPI.create({
       level_id: parseInt(id!),
@@ -46,9 +54,7 @@ export default function Briefing() {
       char_start,
       char_end
     }).then(() => {
-      // Refresh highlights
-      highlightsAPI.getForLevel(parseInt(id!))
-        .then(res => setHighlights(res.data))
+      highlightsAPI.getForLevel(parseInt(id!)).then(res => setHighlights(res.data))
     }).catch(console.error)
   }
 
@@ -86,7 +92,7 @@ export default function Briefing() {
           </button>
         </div>
         
-        <div className="narrative" onMouseUp={handleTextSelection}>
+        <div ref={narrativeRef} className="narrative" onMouseUp={handleTextSelection}>
           {level.narrative.split('\n').map((para, i) => (
             <p key={i}>{para}</p>
           ))}

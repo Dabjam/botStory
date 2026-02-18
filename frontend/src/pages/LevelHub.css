@@ -308,10 +308,11 @@
   color: var(--primary);
 }
 
+.level-status.active,
 .level-status.locked {
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid var(--text-secondary);
-  color: var(--text-secondary);
+  background: rgba(183, 148, 246, 0.15);
+  border: 2px solid var(--primary);
+  color: var(--primary);
 }
 
 @keyframes statusPulse {

@@ -84,9 +84,9 @@ export default function Landing() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
-            АЛГОРИТМИЧЕСКИЙ
+            LEGEND OF
             <br />
-            <span className="hero-title-accent">РОБОТ</span>
+            <span className="hero-title-accent">B.O.T.</span>
           </motion.h1>
 
           <motion.p 
@@ -97,7 +97,7 @@ export default function Landing() {
           >
             Изучай программирование в киберпространстве будущего
             <br />
-            Решай задачи. Управляй роботом. Становись мастером кода.
+            Решай задачи. Управляй B.O.T. Становись мастером кода.
           </motion.p>
 
           <motion.div 
@@ -168,7 +168,7 @@ export default function Landing() {
       </section>
 
       {/* Features section */}
-      <section className="features">
+      <section id="features" className="features">
         <motion.h2
           className="section-title glitch"
           initial={{ opacity: 0 }}
@@ -183,7 +183,7 @@ export default function Landing() {
             {
               icon: '⚡',
               title: 'ИГРОВОЙ ДВИЖОК',
-              desc: 'Решай задачи, управляя роботом на изометрической 3D-карте в реальном времени',
+              desc: 'Решай задачи, управляя B.O.T. на изометрической 3D-карте в реальном времени',
               color: 'var(--primary)'
             },
             {
@@ -278,11 +278,8 @@ export default function Landing() {
                 </div>
                 <h3 className="news-title">{item.title}</h3>
                 <p className="news-content">
-                  {item.content.substring(0, 150)}...
+                  {item.content.length > 200 ? `${item.content.substring(0, 200)}...` : item.content}
                 </p>
-                <div className="news-footer">
-                  <button className="btn-link">ЧИТАТЬ ДАЛЕЕ →</button>
-                </div>
               </motion.div>
             ))}
           </div>
@@ -316,16 +313,14 @@ export default function Landing() {
       <footer className="landing-footer">
         <div className="footer-content">
           <div className="footer-logo">
-            <span className="glitch">АЛГОРИТМИЧЕСКИЙ РОБОТ</span>
+            <span className="glitch">LEGEND OF B.O.T.</span>
           </div>
           <div className="footer-links">
-            <a href="#">О проекте</a>
-            <a href="#">Документация</a>
-            <a href="#">Поддержка</a>
-            <a href="#">GitHub</a>
+            <a href="#features">О проекте</a>
+            <Link to="/levels">К миссиям</Link>
           </div>
           <div className="footer-copy">
-            <p>© 2026 Algorithmic Robot. Все права защищены.</p>
+            <p>© 2026 Legend of B.O.T. Все права защищены.</p>
             <p className="text-secondary">Powered by Future Technologies</p>
           </div>
         </div>

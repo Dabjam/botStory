@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+from pydantic import BaseModel
 
 from app.db.database import get_db
-from app.db.models import User
+from app.db.models import User, Level, LevelProgress
 from app.schemas.user import UserResponse, UserUpdate
 from app.core.deps import get_current_user, get_current_admin
 from app.core.security import get_password_hash
@@ -11,10 +12,48 @@ from app.core.security import get_password_hash
 router = APIRouter()
 
 
+class UserStatsResponse(BaseModel):
+    completed: int
+    total: int
+    progress_percent: int
+
+
+class LevelProgressItem(BaseModel):
+    level_id: int
+    completed: bool
+
+
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current user profile"""
     return current_user
+
+
+@router.get("/me/stats", response_model=UserStatsResponse)
+async def get_current_user_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get current user progress stats (completed levels count)"""
+    total = db.query(Level).filter(Level.is_active == True).count()
+    completed = db.query(LevelProgress).filter(
+        LevelProgress.user_id == current_user.id,
+        LevelProgress.completed == True
+    ).count()
+    progress_percent = round((completed / total) * 100) if total else 0
+    return UserStatsResponse(completed=completed, total=total, progress_percent=progress_percent)
+
+
+@router.get("/me/progress", response_model=List[LevelProgressItem])
+async def get_current_user_level_progress(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get completion status for each level (for LevelHub filters and badges)"""
+    rows = db.query(LevelProgress.level_id, LevelProgress.completed).filter(
+        LevelProgress.user_id == current_user.id
+    ).all()
+    return [LevelProgressItem(level_id=r.level_id, completed=r.completed) for r in rows]
 
 
 @router.patch("/me", response_model=UserResponse)

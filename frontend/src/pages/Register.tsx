@@ -7,6 +7,7 @@ import './Auth.css'
 export default function Register() {
   const navigate = useNavigate()
   const { register, error, isLoading, clearError } = useAuthStore()
+  const [validationError, setValidationError] = useState('')
   const [email, setEmail] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -32,9 +33,10 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     clearError()
+    setValidationError('')
     
     if (password !== confirmPassword) {
-      alert('Пароли не совпадают')
+      setValidationError('Пароли не совпадают')
       return
     }
     
@@ -87,14 +89,14 @@ export default function Register() {
           Создание нового аккаунта
         </motion.p>
         
-        {error && (
+        {(error || validationError) && (
           <motion.div 
             className="error-message"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ type: "spring", stiffness: 300 }}
           >
-            ⚠ {error}
+            ⚠ {error || validationError}
           </motion.div>
         )}
         

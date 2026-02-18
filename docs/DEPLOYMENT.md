@@ -47,8 +47,8 @@ docker-compose up -d
 # Применить миграции
 docker-compose exec backend alembic upgrade head
 
-# Создать администратора
-docker-compose exec backend python scripts/create_admin.py
+# Создать администратора (рекомендуется create_admin_simple.py)
+docker-compose exec backend python scripts/create_admin_simple.py
 
 # Загрузить тестовые данные
 docker-compose exec backend python scripts/seed_data.py
@@ -61,7 +61,7 @@ docker-compose exec backend python scripts/seed_data.py
 - **API Documentation**: http://localhost:8000/docs
 - **Admin credentials**: 
   - Email: admin@botstory.com
-  - Password: admin123
+  - Password: admin
 
 ---
 
@@ -86,7 +86,7 @@ pip install -r requirements.txt
 alembic upgrade head
 
 # Создать админа и загрузить данные
-python scripts/create_admin.py
+python scripts/create_admin_simple.py
 python scripts/seed_data.py
 
 # Запустить сервер
@@ -214,7 +214,7 @@ docker-compose up -d
 
 # Инициализировать БД
 docker-compose exec backend alembic upgrade head
-docker-compose exec backend python scripts/create_admin.py
+docker-compose exec backend python scripts/create_admin_simple.py
 docker-compose exec backend python scripts/seed_data.py
 ```
 

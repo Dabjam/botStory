@@ -2,7 +2,17 @@ import { useState } from 'react'
 import { levelAPI } from '../services/api'
 import './AdminPanel.css'
 
+const CELL_TYPES = [
+  { value: 'empty', label: 'Пусто', short: '·' },
+  { value: 'wall', label: 'Стена', short: '▣' },
+  { value: 'trap', label: 'Ловушка', short: '⚠' },
+  { value: 'start', label: 'Старт', short: '▶' },
+  { value: 'finish', label: 'Финиш', short: '★' }
+] as const
+
 export default function AdminPanel() {
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [selectedCellType, setSelectedCellType] = useState<string>('empty')
   const [levelData, setLevelData] = useState({
     title: '',
     description: '',
@@ -20,11 +30,10 @@ export default function AdminPanel() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+    setMessage(null)
     try {
       await levelAPI.create(levelData)
-      alert('Уровень создан успешно!')
-      // Reset form
+      setMessage({ type: 'success', text: 'Уровень создан успешно!' })
       setLevelData({
         ...levelData,
         title: '',
@@ -33,7 +42,9 @@ export default function AdminPanel() {
         golden_code: ''
       })
     } catch (error: any) {
-      alert('Ошибка: ' + (error.response?.data?.detail || 'Не удалось создать уровень'))
+      const d = error.response?.data?.detail
+      const text = Array.isArray(d) ? (d[0]?.msg || d[0] || d.join(', ')) : (d || 'Не удалось создать уровень')
+      setMessage({ type: 'error', text: typeof text === 'string' ? text : 'Не удалось создать уровень' })
     }
   }
 
@@ -49,7 +60,11 @@ export default function AdminPanel() {
   return (
     <div className="admin-panel">
       <h1>Конструктор уровней</h1>
-      
+      {message && (
+        <div className={`admin-message ${message.type}`}>
+          {message.type === 'success' ? '✓' : '⚠'} {message.text}
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="level-form">
         <div className="form-section">
           <h2>Основная информация</h2>
@@ -109,24 +124,39 @@ export default function AdminPanel() {
           </div>
         </div>
         
-        <div className="form-section">
+        <div className="form-section map-section">
           <h2>Карта уровня</h2>
+          <div className="map-toolbar">
+            <label className="map-toolbar-label">Тип клетки:</label>
+            <div className="map-type-select-wrap">
+              <select
+                value={selectedCellType}
+                onChange={(e) => setSelectedCellType(e.target.value)}
+                className="map-type-select"
+                aria-label="Выберите тип клетки"
+              >
+                {CELL_TYPES.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+              <span className="map-type-select-icon" aria-hidden>▼</span>
+            </div>
+            <span className="map-toolbar-hint">Клик по клетке — установить тип</span>
+          </div>
           <div className="map-editor">
             {levelData.map_data.cells.map((row, y) => (
               <div key={y} className="map-row">
                 {row.map((cell, x) => (
-                  <select
+                  <button
                     key={x}
-                    value={cell}
-                    onChange={(e) => updateCell(y, x, e.target.value)}
-                    className={`map-cell ${cell}`}
+                    type="button"
+                    onClick={() => updateCell(y, x, selectedCellType)}
+                    className={`map-cell map-cell--${cell}`}
+                    title={`${CELL_TYPES.find(t => t.value === cell)?.label ?? cell} — клик: ${CELL_TYPES.find(t => t.value === selectedCellType)?.label}`}
                   >
-                    <option value="empty">Пусто</option>
-                    <option value="wall">Стена</option>
-                    <option value="trap">Ловушка</option>
-                    <option value="start">Старт</option>
-                    <option value="finish">Финиш</option>
-                  </select>
+                    <span className="map-cell-icon">{CELL_TYPES.find(t => t.value === cell)?.short ?? '·'}</span>
+                    <span className="map-cell-label">{CELL_TYPES.find(t => t.value === cell)?.label ?? cell}</span>
+                  </button>
                 ))}
               </div>
             ))}

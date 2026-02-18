@@ -32,6 +32,8 @@ export const authAPI = {
 // User API
 export const userAPI = {
   getProfile: () => api.get('/users/me'),
+  getStats: () => api.get<{ completed: number; total: number; progress_percent: number }>('/users/me/stats'),
+  getLevelProgress: () => api.get<{ level_id: number; completed: boolean }[]>('/users/me/progress'),
   updateProfile: (data: any) => api.patch('/users/me', data),
 }
 

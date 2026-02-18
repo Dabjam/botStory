@@ -1,154 +1,160 @@
-# 🤖 Алгоритмический Робот
+# Legend of B.O.T.
 
-> Футуристичная образовательная платформа для изучения программирования через решение алгоритмических задач с использованием синтаксиса языка «Кумир».
+> Образовательная платформа для изучения программирования через алгоритмические задачи на синтаксисе языка «Кумир».  
+> **B.O.T.** = **B**eing **O**f **T**tomorrow
 
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 ![Version](https://img.shields.io/badge/version-2.1-blue.svg)
-![Design](https://img.shields.io/badge/design-cyberpunk-ff00ff.svg)
-![3D](https://img.shields.io/badge/graphics-3D%20isometric-00ff9f.svg)
 
-## ✨ Новое в версии 2.1
-
-- 🤖 **3D Робот с Three.js** - полноценная интерактивная модель на главной странице
-- 🎨 **Детализированный Canvas** - улучшенная графика робота в игре с множеством эффектов
-- 🎮 **Minecraft Шрифт** - игровой стиль для счетчиков и статистики
-- ⚡ **Premium UI** - обновленные стили всех страниц с кинематографическими эффектами
-- 🚀 **Оптимизация** - исправлены зависимости и улучшена производительность
-
-📖 **[Полный список изменений](IMPROVEMENTS.md)** | 🚀 **[Руководство по обновлению](UPDATE_GUIDE.md)**
-
-## 🎨 Дизайн
-
-Приложение выполнено в **футуристичном киберпанк-стиле** с:
-
-- ✨ **Изометрической 3D графикой** (Three.js + React Three Fiber)
-- 🤖 **Интерактивными 3D моделями** с orbit controls
-- 🌊 **Множеством плавных анимаций** (Framer Motion)
-- 💫 **Неоновыми эффектами** и glassmorphism
-- 🎭 **Holographic** и sci-fi визуализацией
-- ⚡ **Интерактивными элементами** с реалтайм feedback
-- 🎮 **Minecraft шрифтом** для игровых элементов
-
-> Подробнее: [FRONTEND_REDESIGN.md](FRONTEND_REDESIGN.md) | [IMPROVEMENTS.md](IMPROVEMENTS.md)
-
-## 🏗️ Архитектура
-
-- **Backend**: FastAPI (Python) + PostgreSQL + Redis
-- **Frontend**: React + TypeScript + Vite + Framer Motion + Three.js
-- **Kumir Executor**: Python-интерпретатор подмножества команд Кумир
-- **Design**: Cyberpunk/Sci-Fi с изометрической графикой
+---
 
 ## Быстрый старт
 
 ### Требования
 
-- Docker & Docker Compose
-- Node.js 18+ (для локальной разработки frontend)
-- Python 3.11+ (для локальной разработки backend)
+- **Docker** и **Docker Compose**
+- Git
 
-### Запуск в Docker
+### За 5 минут
 
 ```bash
-# Клонировать репозиторий
 git clone https://github.com/Samurai2306/botStory.git
 cd botStory
 
-# Запустить все сервисы
+# Запуск всех сервисов
 docker-compose up -d
 
-# Применить миграции БД
+# Инициализация БД (один раз после первого запуска)
 docker-compose exec backend alembic upgrade head
-
-# Создать тестового администратора
-docker-compose exec backend python scripts/create_admin.py
+docker-compose exec backend python scripts/create_admin_simple.py
+docker-compose exec backend python scripts/seed_data.py
 ```
 
-Приложение будет доступно:
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
+**Открыть:**  
+- Frontend: http://localhost:5173  
+- API: http://localhost:8000  
+- Документация API: http://localhost:8000/docs  
 
-### Локальная разработка
+**Вход администратора:**  
+- Email: `admin@botstory.com`  
+- Пароль: `admin`  
 
-#### Backend
+> После первого входа пароль рекомендуется сменить.
+
+---
+
+## Что запускать и в каком порядке
+
+| Действие | Команда | Когда |
+|----------|---------|--------|
+| Поднять сервисы | `docker-compose up -d` | Всегда первым. Поднимает PostgreSQL, Redis, backend, frontend. |
+| Миграции БД | `docker-compose exec backend alembic upgrade head` | После первого клонирования и после появления новых миграций. |
+| Создать админа | `docker-compose exec backend python scripts/create_admin_simple.py` | Один раз после миграций (или если сбросили БД). |
+| Тестовые данные | `docker-compose exec backend python scripts/seed_data.py` | По желанию: уровни и новости. |
+| Перезапуск после изменений кода | `docker-compose restart backend` или `restart frontend` | Код смонтирован в контейнеры — перезапуска достаточно. |
+| Полная пересборка | `docker-compose up -d --build` | Если меняли Dockerfile или зависимости. |
+
+---
+
+## Чего не делать и почему
+
+- **Не запускать** `create_admin.py` (старый скрипт) — используйте `create_admin_simple.py`: он не зависит от passlib и корректно работает с bcrypt.
+- **Не менять** порты в `docker-compose.yml` без необходимости — frontend ожидает backend на 8000 (через proxy в dev).
+- **Не хранить** секреты в репозитории — для production заведите `.env` и не коммитьте его (см. `docs/DEPLOYMENT.md`).
+- **Не выполнять** `alembic downgrade` на production без бэкапа БД — возможна потеря данных.
+
+---
+
+## Как реагировать на типичные проблемы
+
+### Порты заняты (5432, 6379, 8000, 5173)
+
+Измените маппинг портов в `docker-compose.yml` для нужного сервиса, например:
+
+```yaml
+ports:
+  - "8001:8000"  # backend на 8001 снаружи
+```
+
+Или остановите процесс, занимающий порт.
+
+### Backend не стартует / ошибки БД
 
 ```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+# Логи backend
+docker-compose logs backend
+
+# Проверка доступности PostgreSQL
+docker-compose ps
 ```
 
-#### Frontend
+Убедитесь, что контейнер `postgres` в состоянии `Up`. Если БД пересоздавали — заново выполните миграции и скрипт создания админа.
+
+### Ошибка «Incorrect email or password» / «trapped bcrypt»
+
+- Вход: используйте `admin@botstory.com` / `admin` после создания админа через `create_admin_simple.py`.
+- Если при создании админа падает bcrypt — в проекте используется прямой `bcrypt` в `app/core/security.py` и в `create_admin_simple.py`; убедитесь, что не вызывается старый `create_admin.py` с passlib.
+
+### Frontend не подключается к API
+
+- Проверьте, что backend отвечает: `curl http://localhost:8000/health`
+- В dev Vite проксирует `/api` на backend; проверьте `frontend/vite.config.ts` (proxy target).
+
+### Пустой список уровней / 401 в консоли
+
+- Выполнен ли вход; не истёк ли JWT.
+- После перезапуска backend токен остаётся валидным, пока не истечёт срок (настройка в backend).
+
+### Ошибки при `npm install` (frontend)
 
 ```bash
 cd frontend
+rm -rf node_modules package-lock.json
 npm install
-npm run dev
 ```
+
+Требуется Node.js 18+.
+
+---
 
 ## Структура проекта
 
 ```
 botStory/
-├── backend/              # FastAPI application
-│   ├── app/
-│   │   ├── api/         # API endpoints
-│   │   ├── core/        # Config, security, deps
-│   │   ├── db/          # Database models & migrations
-│   │   ├── schemas/     # Pydantic schemas
-│   │   └── services/    # Business logic
-│   ├── kumir/           # Kumir executor
-│   └── tests/
-├── frontend/            # React application
-│   ├── src/
-│   │   ├── components/  # React components
-│   │   ├── pages/       # Page components
-│   │   ├── services/    # API client
-│   │   ├── store/       # State management
-│   │   └── utils/       # Utilities
-│   └── public/
+├── backend/          # FastAPI, PostgreSQL, Kumir-исполнитель
+│   ├── app/          # API, модели, ядро
+│   ├── kumir/        # Интерпретатор команд Кумир
+│   └── scripts/      # create_admin_simple.py, seed_data.py
+├── frontend/         # React + TypeScript + Vite
+│   └── src/          # Страницы, компоненты, store, api
+├── docs/             # API_GUIDE, DEPLOYMENT, FEATURES
 └── docker-compose.yml
 ```
 
+---
+
 ## Роли пользователей
 
-- **Гость**: Просмотр лендинга и новостей
-- **Игрок**: Прохождение уровней, доступ к дневнику и чатам
-- **Администратор**: Создание уровней, модерация
+| Роль | Возможности |
+|------|-------------|
+| Гость | Лендинг, новости, вход/регистрация |
+| Игрок | Уровни, брифинг → игра → дебрифинг, дневник, чаты, профиль |
+| Администратор | Всё выше + создание уровней, модерация, новости |
 
-## Разработка
-
-### Миграции БД
-
-```bash
-# Создать миграцию
-docker-compose exec backend alembic revision --autogenerate -m "description"
-
-# Применить миграции
-docker-compose exec backend alembic upgrade head
-
-# Откатить миграцию
-docker-compose exec backend alembic downgrade -1
-```
-
-### Тесты
-
-```bash
-# Backend
-docker-compose exec backend pytest
-
-# Frontend
-cd frontend && npm run test
-```
+---
 
 ## Документация
 
-- [API Documentation](http://localhost:8000/docs) - Swagger UI
-- [Техническое задание](docs/TZ.md)
-- [Архитектура БД](docs/DATABASE.md)
-- [Руководство администратора](docs/ADMIN_GUIDE.md)
+| Документ | Содержание |
+|----------|------------|
+| [QUICKSTART.md](QUICKSTART.md) | Подробный быстрый старт и первые шаги в игре |
+| [FULLTECHINSTRUCTION.md](FULLTECHINSTRUCTION.md) | Полная техническая инструкция: запуск, окружение, исправления |
+| [DEVSTORY.md](DEVSTORY.md) | История разработки по неделям и дням (2 разработчика) |
+| [docs/API_GUIDE.md](docs/API_GUIDE.md) | Описание API |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Развёртывание на production |
+| [docs/FEATURES.md](docs/FEATURES.md) | Реализованный функционал |
+
+---
 
 ## Лицензия
 

@@ -28,7 +28,7 @@ export default function Layout() {
         transition={{ duration: 0.6, type: "spring" }}
       >
         <div className="nav-brand">
-          <Link to="/levels">АЛГОРИТМИЧЕСКИЙ РОБОТ</Link>
+          <Link to="/levels">LEGEND OF B.O.T.</Link>
         </div>
 
         {user && (

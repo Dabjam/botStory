@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '../store/authStore'
-import { levelAPI } from '../services/api'
+import { userAPI } from '../services/api'
 import './Profile.css'
 
 export default function Profile() {
@@ -8,13 +8,12 @@ export default function Profile() {
   const [stats, setStats] = useState({ completed: 0, total: 0 })
 
   useEffect(() => {
-    // In real app, fetch user's completed levels
-    levelAPI.getAll().then(res => {
-      setStats({
-        completed: 0, // Would need backend endpoint for this
-        total: res.data.length
-      })
-    }).catch(console.error)
+    userAPI.getStats()
+      .then(res => setStats({
+        completed: res.data.completed,
+        total: res.data.total
+      }))
+      .catch(console.error)
   }, [])
 
   if (!user) return null

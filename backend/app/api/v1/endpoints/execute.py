@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from app.db.database import get_db
 from app.db.models import Level, User
@@ -22,11 +22,11 @@ class ExecuteResponse(BaseModel):
     steps_count: int
     history: List[tuple]
     final_position: Dict[str, Any]
-    error: str = None
-    
+    error: Optional[str] = None
+
     # Comparison with golden standard
-    is_optimal: bool = None
-    golden_steps_count: int = None
+    is_optimal: Optional[bool] = None
+    golden_steps_count: Optional[int] = None
 
 
 @router.post("/", response_model=ExecuteResponse)

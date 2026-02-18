@@ -50,10 +50,12 @@ async def login(
     db: Session = Depends(get_db)
 ):
     """Login and get access token"""
-    # Find user by email (using username field from form)
-    user = db.query(User).filter(User.email == form_data.username).first()
+    # Find user by email (OAuth2 form sends email in "username" field); case-insensitive
+    email_lower = (form_data.username or "").strip().lower()
+    password = (form_data.password or "").strip()
+    user = db.query(User).filter(User.email.ilike(email_lower)).first()
     
-    if not user or not verify_password(form_data.password, user.password_hash):
+    if not user or not verify_password(password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",

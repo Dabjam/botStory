@@ -97,7 +97,6 @@ botStory/
 ├── docker-compose.yml             # Docker Compose конфигурация
 ├── .gitignore                     # Git ignore
 ├── README.md                      # Основное описание
-├── QUICKSTART.md                  # Быстрый старт
 └── PROJECT_STRUCTURE.md           # Этот файл
 
 ```

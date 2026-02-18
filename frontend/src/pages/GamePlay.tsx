@@ -58,7 +58,13 @@ export default function GamePlay() {
         setTimeout(() => setShowDebriefing(true), 2000)
       }
     } catch (error: any) {
-      alert(error.response?.data?.detail || 'Ошибка выполнения кода')
+      setExecutionResult({
+        success: false,
+        error: error.response?.data?.detail || 'Ошибка выполнения кода',
+        steps_count: 0,
+        history: [],
+        reached_finish: false
+      })
     } finally {
       setIsExecuting(false)
     }
@@ -71,7 +77,14 @@ export default function GamePlay() {
   }
 
   if (!level) {
-    return <div className="loading">Загрузка...</div>
+    return (
+      <div className="gameplay gameplay-loading">
+        <div className="loading-state">
+          <span className="loading-spinner" />
+          <p>Загрузка миссии...</p>
+        </div>
+      </div>
+    )
   }
 
   if (showDebriefing) {
@@ -97,18 +110,23 @@ export default function GamePlay() {
       
       <div className="gameplay-layout">
         <div className="game-area">
-          <IsometricCanvas
-            mapData={level.map_data}
-            robotHistory={robotHistory}
-          />
-          
-          <CodeEditor
+          <div className="game-area-section">
+            <span className="game-area-label">Карта</span>
+            <IsometricCanvas
+              mapData={level.map_data}
+              robotHistory={robotHistory}
+            />
+          </div>
+          <div className="game-area-section">
+            <span className="game-area-label">Код</span>
+            <CodeEditor
             value={code}
             onChange={setCode}
             onExecute={handleExecute}
             onReset={handleReset}
             isExecuting={isExecuting}
           />
+          </div>
         </div>
         
         <div className="sidebar">

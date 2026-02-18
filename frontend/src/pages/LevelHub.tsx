@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { levelAPI } from '../services/api'
+import { levelAPI, userAPI } from '../services/api'
 import { motion } from 'framer-motion'
 import './LevelHub.css'
 
@@ -15,20 +15,31 @@ interface Level {
 
 export default function LevelHub() {
   const [levels, setLevels] = useState<Level[]>([])
+  const [progressMap, setProgressMap] = useState<Record<number, boolean>>({})
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'completed' | 'active'>('all')
 
   useEffect(() => {
-    levelAPI.getAll()
-      .then(res => {
-        setLevels(res.data)
-        setLoading(false)
+    Promise.all([levelAPI.getAll(), userAPI.getLevelProgress()])
+      .then(([levelsRes, progressRes]) => {
+        setLevels(levelsRes.data)
+        const map: Record<number, boolean> = {}
+        ;(progressRes.data || []).forEach((p: { level_id: number; completed: boolean }) => {
+          map[p.level_id] = p.completed
+        })
+        setProgressMap(map)
       })
       .catch(err => {
         console.error(err)
-        setLoading(false)
       })
+      .finally(() => setLoading(false))
   }, [])
+
+  const filteredLevels = useMemo(() => {
+    if (filter === 'all') return levels
+    if (filter === 'completed') return levels.filter(l => progressMap[l.id])
+    return levels.filter(l => !progressMap[l.id])
+  }, [levels, filter, progressMap])
 
   if (loading) {
     return (
@@ -80,13 +91,13 @@ export default function LevelHub() {
             </button>
           </div>
           <div className="level-count">
-            <span className="glow-text">{levels.length}</span> доступных миссий
+            <span className="glow-text">{filteredLevels.length}</span> {filter === 'all' ? 'доступных миссий' : filter === 'completed' ? 'пройдено' : 'в процессе'}
           </div>
         </motion.div>
       )}
       
       <div className="levels-grid">
-        {levels.map((level, i) => (
+        {filteredLevels.map((level, i) => (
           <motion.div
             key={level.id}
             className="level-card"
@@ -116,14 +127,14 @@ export default function LevelHub() {
                 </div>
               </div>
               
-              {/* Status indicator */}
+              {/* Status indicator: пройден или доступен */}
               <motion.div 
-                className="level-status locked"
+                className={`level-status ${progressMap[level.id] ? 'completed' : 'active'}`}
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2 * i, type: "spring" }}
               >
-                {level.order <= 3 ? '✓' : '🔒'}
+                {progressMap[level.id] ? '✓' : '▶'}
               </motion.div>
             </div>
 
@@ -165,7 +176,7 @@ export default function LevelHub() {
         ))}
       </div>
       
-      {levels.length === 0 && (
+      {filteredLevels.length === 0 && (
         <motion.div 
           className="no-levels"
           initial={{ opacity: 0, scale: 0.8 }}
@@ -173,8 +184,22 @@ export default function LevelHub() {
           transition={{ duration: 0.6 }}
         >
           <div className="no-levels-icon">🤖</div>
-          <p>МИССИИ НЕ НАЙДЕНЫ</p>
-          <p>Скоро здесь появятся захватывающие задачи!</p>
+          {levels.length === 0 ? (
+            <>
+              <p>МИССИИ НЕ НАЙДЕНЫ</p>
+              <p>Скоро здесь появятся захватывающие задачи!</p>
+            </>
+          ) : filter === 'completed' ? (
+            <>
+              <p>ПРОЙДЕННЫХ МИССИЙ ПОКА НЕТ</p>
+              <p>Пройдите миссии во вкладке «Все уровни»</p>
+            </>
+          ) : (
+            <>
+              <p>ВСЕ МИССИИ ПРОЙДЕНЫ</p>
+              <p>Отличная работа! Посмотрите «Пройденные»</p>
+            </>
+          )}
         </motion.div>
       )}
     </div>

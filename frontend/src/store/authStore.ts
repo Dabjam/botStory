@@ -1,6 +1,18 @@
 import { create } from 'zustand'
 import { authAPI, userAPI } from '../services/api'
 
+function authErrorToRu(detail: string | string[]): string {
+  const raw = Array.isArray(detail) ? detail[0] : detail
+  if (!raw || typeof raw !== 'string') return 'Ошибка'
+  const map: Record<string, string> = {
+    'Incorrect email or password': 'Неверный email или пароль',
+    'User account is inactive': 'Учётная запись деактивирована',
+    'Email already registered': 'Этот email уже зарегистрирован',
+    'Username already taken': 'Имя пользователя уже занято',
+  }
+  return map[raw] ?? raw
+}
+
 interface User {
   id: number
   email: string
@@ -44,7 +56,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       const userResponse = await userAPI.getProfile()
       set({ user: userResponse.data, isLoading: false })
     } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || 'Login failed'
+      const raw = error.response?.data?.detail ?? 'Ошибка входа'
+      const errorMessage = authErrorToRu(raw)
       set({ error: errorMessage, isLoading: false })
       throw error
     }
@@ -58,8 +71,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       // Auto-login after registration
       await useAuthStore.getState().login(email, password)
     } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || 'Registration failed'
-      set({ error: errorMessage, isLoading: false })
+      const raw = error.response?.data?.detail ?? 'Ошибка регистрации'
+      set({ error: authErrorToRu(raw), isLoading: false })
       throw error
     }
   },

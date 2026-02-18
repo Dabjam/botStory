@@ -1,20 +1,32 @@
 from datetime import datetime, timedelta
 from typing import Optional
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from app.core.config import settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against a hash"""
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify a password against a bcrypt hash (compatible with create_admin_simple and passlib-style hashes)."""
+    if not plain_password or not hashed_password:
+        return False
+    # Bcrypt limit 72 bytes
+    raw = plain_password.encode("utf-8")
+    if len(raw) > 72:
+        raw = raw[:72]
+    try:
+        if hashed_password.startswith("$2"):
+            return bcrypt.checkpw(raw, hashed_password.encode("utf-8"))
+        return False
+    except Exception:
+        return False
 
 
 def get_password_hash(password: str) -> str:
-    """Generate password hash"""
-    return pwd_context.hash(password)
+    """Generate bcrypt hash (same format as create_admin_simple.py)."""
+    raw = password.encode("utf-8")
+    if len(raw) > 72:
+        raw = raw[:72]
+    return bcrypt.hashpw(raw, bcrypt.gensalt()).decode("utf-8")
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:

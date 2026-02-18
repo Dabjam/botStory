@@ -16,9 +16,9 @@ interface Props {
 
 // Custom Kumir syntax highlighting
 const kumirHighlight = HighlightStyle.define([
-  { tag: tags.keyword, color: '#ff79c6' },
-  { tag: tags.comment, color: '#6272a4' },
-  { tag: tags.number, color: '#bd93f9' },
+  { tag: tags.keyword, color: '#c084fc' },
+  { tag: tags.comment, color: 'rgba(183, 148, 246, 0.5)' },
+  { tag: tags.number, color: '#fbbf24' },
 ])
 
 export default function CodeEditor({ value, onChange, onExecute, onReset, isExecuting }: Props) {
@@ -40,17 +40,17 @@ export default function CodeEditor({ value, onChange, onExecute, onReset, isExec
         syntaxHighlighting(kumirHighlight),
         EditorView.theme({
           '&': {
-            background: '#1e1e1e',
-            color: '#d4d4d4',
+            background: 'rgba(8, 6, 16, 0.98)',
+            color: '#e9d5ff',
             fontSize: '14px',
           },
           '.cm-content': {
-            padding: '10px',
-            fontFamily: 'monospace',
+            padding: '10px 12px',
+            fontFamily: '"Rajdhani", "Fira Code", monospace',
           },
           '.cm-gutters': {
-            background: '#1e1e1e',
-            color: '#858585',
+            background: 'rgba(12, 10, 22, 0.98)',
+            color: 'rgba(183, 148, 246, 0.5)',
             border: 'none',
           },
         }),
