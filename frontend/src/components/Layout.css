@@ -148,7 +148,7 @@
   box-shadow: 0 0 20px rgba(255, 0, 85, 0.4) !important;
 }
 
-/* User indicator */
+/* Значок с именем пользователя (ссылка на профиль) */
 .nav-user {
   display: flex;
   align-items: center;
@@ -158,6 +158,15 @@
   border: 1px solid var(--border-glass);
   border-radius: 999px;
   margin-right: 1rem;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.nav-user:hover {
+  background: rgba(139, 126, 216, 0.18);
+  border-color: rgba(139, 126, 216, 0.4);
+  box-shadow: 0 0 15px rgba(139, 126, 216, 0.2);
 }
 
 .user-avatar {

@@ -32,17 +32,21 @@ export default function Layout() {
         </div>
 
         {user && (
-          <motion.div 
+          <Link
+            to="/profile"
             className="nav-user"
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3 }}
+            onClick={() => setMenuOpen(false)}
           >
-            <div className="user-avatar">
+            <motion.div
+              className="user-avatar"
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3 }}
+            >
               {user.username.charAt(0).toUpperCase()}
-            </div>
+            </motion.div>
             <span className="user-name">{user.username}</span>
-          </motion.div>
+          </Link>
         )}
 
         <div className={`menu-toggle ${menuOpen ? 'active' : ''}`} onClick={() => setMenuOpen(!menuOpen)}>
@@ -65,11 +69,11 @@ export default function Layout() {
             ◉ МИССИИ
           </Link>
           <Link 
-            to="/profile" 
-            className={isActive('/profile') ? 'active' : ''}
+            to="/community" 
+            className={isActive('/community') ? 'active' : ''}
             onClick={() => setMenuOpen(false)}
           >
-            ◈ ПРОФИЛЬ
+            ◐ СООБЩЕСТВО
           </Link>
           {user?.role === 'admin' && (
             <Link 

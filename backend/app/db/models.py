@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, Text, ForeignKey, DateTime, Enum, JSON
+from sqlalchemy import Column, Integer, String, Boolean, Text, ForeignKey, DateTime, Enum, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -29,6 +29,11 @@ class User(Base):
     notes = relationship("Note", back_populates="user", cascade="all, delete-orphan")
     highlights = relationship("Highlight", back_populates="user", cascade="all, delete-orphan")
     messages = relationship("Message", back_populates="user", cascade="all, delete-orphan")
+    community_posts = relationship("CommunityPost", back_populates="author", cascade="all, delete-orphan")
+    community_comments = relationship("CommunityComment", back_populates="author", cascade="all, delete-orphan")
+    post_likes = relationship("CommunityPostLike", back_populates="user", cascade="all, delete-orphan")
+    community_polls = relationship("CommunityPoll", back_populates="author", cascade="all, delete-orphan")
+    poll_votes = relationship("CommunityPollVote", back_populates="user", cascade="all, delete-orphan")
 
 
 class Level(Base):
@@ -163,3 +168,95 @@ class News(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     is_published = Column(Boolean, default=False)
+
+
+class PostCategory(str, enum.Enum):
+    DISCUSSION = "discussion"   # Обсуждение
+    QUESTION = "question"      # Вопрос
+    IDEA = "idea"              # Идея
+    ANNOUNCEMENT = "announcement"  # Объявление
+
+
+class CommunityPost(Base):
+    __tablename__ = "community_posts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String, nullable=False)
+    content = Column(Text, nullable=False)
+    category = Column(Enum(PostCategory), default=PostCategory.DISCUSSION)
+    pinned = Column(Boolean, default=False)  # Закреплённый пост (админ)
+    
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    author = relationship("User", back_populates="community_posts")
+    comments = relationship("CommunityComment", back_populates="post", cascade="all, delete-orphan", order_by="CommunityComment.created_at")
+    likes = relationship("CommunityPostLike", back_populates="post", cascade="all, delete-orphan")
+
+
+class CommunityComment(Base):
+    __tablename__ = "community_comments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    post_id = Column(Integer, ForeignKey("community_posts.id"), nullable=False)
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    parent_id = Column(Integer, ForeignKey("community_comments.id"), nullable=True)  # ответ на комментарий
+    content = Column(Text, nullable=False)
+    
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    post = relationship("CommunityPost", back_populates="comments")
+    author = relationship("User", back_populates="community_comments")
+    parent = relationship("CommunityComment", remote_side=[id], backref="replies")
+
+
+class CommunityPostLike(Base):
+    __tablename__ = "community_post_likes"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    post_id = Column(Integer, ForeignKey("community_posts.id"), nullable=False)
+    
+    created_at = Column(DateTime, default=func.now())
+    
+    user = relationship("User", back_populates="post_likes")
+    post = relationship("CommunityPost", back_populates="likes")
+
+
+class CommunityPoll(Base):
+    __tablename__ = "community_polls"
+    id = Column(Integer, primary_key=True, index=True)
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    closed = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    author = relationship("User", back_populates="community_polls")
+    options = relationship("CommunityPollOption", back_populates="poll", cascade="all, delete-orphan", order_by="CommunityPollOption.order")
+    votes = relationship("CommunityPollVote", back_populates="poll", cascade="all, delete-orphan")
+
+
+class CommunityPollOption(Base):
+    __tablename__ = "community_poll_options"
+    id = Column(Integer, primary_key=True, index=True)
+    poll_id = Column(Integer, ForeignKey("community_polls.id"), nullable=False)
+    text = Column(String, nullable=False)
+    order = Column(Integer, default=0)
+    poll = relationship("CommunityPoll", back_populates="options")
+    votes = relationship("CommunityPollVote", back_populates="option", cascade="all, delete-orphan")
+
+
+class CommunityPollVote(Base):
+    __tablename__ = "community_poll_votes"
+    __table_args__ = (UniqueConstraint("user_id", "poll_id", name="uq_poll_vote_user_poll"),)
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    poll_id = Column(Integer, ForeignKey("community_polls.id"), nullable=False)
+    option_id = Column(Integer, ForeignKey("community_poll_options.id"), nullable=False)
+    created_at = Column(DateTime, default=func.now())
+    user = relationship("User", back_populates="poll_votes")
+    poll = relationship("CommunityPoll", back_populates="votes")
+    option = relationship("CommunityPollOption", back_populates="votes")

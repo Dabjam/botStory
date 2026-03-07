@@ -116,3 +116,29 @@ export const newsAPI = {
   update: (id: number, data: any) => api.patch(`/news/${id}`, data),
   delete: (id: number) => api.delete(`/news/${id}`),
 }
+
+// Community API (forum posts, comments, likes, commits)
+export const communityAPI = {
+  getPosts: (params?: { category?: string; sort?: string; skip?: number; limit?: number }) =>
+    api.get('/community/posts', { params }),
+  getPost: (id: number) => api.get(`/community/posts/${id}`),
+  createPost: (data: { title: string; content: string; category?: string }) =>
+    api.post('/community/posts', data),
+  updatePost: (id: number, data: { title?: string; content?: string; category?: string; pinned?: boolean }) =>
+    api.patch(`/community/posts/${id}`, data),
+  deletePost: (id: number) => api.delete(`/community/posts/${id}`),
+  likePost: (id: number) => api.post(`/community/posts/${id}/like`),
+  getComments: (postId: number) => api.get(`/community/posts/${postId}/comments`),
+  createComment: (postId: number, data: { content: string; parent_id?: number }) =>
+    api.post(`/community/posts/${postId}/comments`, data),
+  deleteComment: (commentId: number) => api.delete(`/community/comments/${commentId}`),
+  getCommits: (limit?: number) => api.get('/community/commits', { params: { limit } }),
+  // Опросы
+  getPolls: (params?: { skip?: number; limit?: number }) => api.get('/community/polls', { params }),
+  getPoll: (id: number) => api.get(`/community/polls/${id}`),
+  createPoll: (data: { title: string; description?: string; options: { text: string }[] }) =>
+    api.post('/community/polls', data),
+  votePoll: (pollId: number, optionId: number) =>
+    api.post(`/community/polls/${pollId}/vote`, { option_id: optionId }),
+  deletePoll: (id: number) => api.delete(`/community/polls/${id}`),
+}
