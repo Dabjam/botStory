@@ -8,8 +8,8 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="Algorithmic Robot API",
-    description="Educational platform for learning programming through Kumir language",
+    title="L.o.B.O.T API",
+    description="Educational platform for learning programming",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
