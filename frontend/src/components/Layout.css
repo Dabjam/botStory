@@ -5,6 +5,15 @@
   position: relative;
 }
 
+.layout--reduced-motion *,
+.layout--reduced-motion *::before,
+.layout--reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.05ms !important;
+  scroll-behavior: auto !important;
+}
+
 /* Navbar (в стиле лендинга — glass) */
 .navbar {
   position: relative;

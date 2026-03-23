@@ -11,6 +11,8 @@ from app.schemas.level import (
 )
 from app.schemas.level_words import LevelWordsUpdate, LevelWordsResponse
 from app.core.deps import get_current_user, get_current_admin, get_optional_user
+from kumir.loop_detect import kumir_code_contains_loop
+from app.services.gamification_hooks import sync_gamification_for_users
 
 router = APIRouter()
 
@@ -209,6 +211,7 @@ async def submit_level_solution(
             LevelProgress.user_id == current_user.id
         ).first()
         
+        code_has_loop = kumir_code_contains_loop(progress_data.user_code)
         if not progress:
             progress = LevelProgress(
                 user_id=current_user.id,
@@ -219,6 +222,7 @@ async def submit_level_solution(
                 completed=True,
                 completed_at=datetime.utcnow(),
                 best_steps_count=progress_data.steps_count,
+                completed_ever_without_loops=(not code_has_loop),
             )
             db.add(progress)
         else:
@@ -229,10 +233,13 @@ async def submit_level_solution(
             progress.completed_at = datetime.utcnow()
             if progress.best_steps_count is None or progress_data.steps_count < progress.best_steps_count:
                 progress.best_steps_count = progress_data.steps_count
-        
+            if not code_has_loop:
+                progress.completed_ever_without_loops = True
+
+        sync_gamification_for_users(db, current_user.id)
         db.commit()
         db.refresh(progress)
-        
+
         return progress
     except HTTPException:
         raise

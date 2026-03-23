@@ -6,7 +6,15 @@ import sys
 sys.path.append('.')
 
 from app.db.database import SessionLocal
-from app.db.models import Level, News, User, UserRole
+from app.db.models import (
+    Level,
+    News,
+    User,
+    UserRole,
+    AchievementDefinition,
+    TitleDefinition,
+    TitleHolderState,
+)
 from app.core.security import get_password_hash
 
 
@@ -308,6 +316,174 @@ def seed_news(db):
     print(f"✓ Создано {len(news_items)} новостей")
 
 
+def seed_achievements_and_titles(db):
+    """Каталог достижений и переходящих титулов (идемпотентно по slug)."""
+    achievements = [
+        {
+            "slug": "community_likes_50",
+            "category": "social",
+            "name": "Народный любимчик",
+            "description": "Получить 50 лайков на своих постах в сообществе.",
+            "trigger_type": "community_likes_on_own_posts",
+            "trigger_config": {"min": 50},
+        },
+        {
+            "slug": "level_chat_100",
+            "category": "social",
+            "name": "Живая легенда чата",
+            "description": "Оставить 100 сообщений в чатах уровней (не удалённых).",
+            "trigger_type": "level_chat_messages",
+            "trigger_config": {"min": 100},
+        },
+        {
+            "slug": "comments_on_others_25",
+            "category": "social",
+            "name": "Меня не спрашивали, но я отвечу!",
+            "description": "Оставить 25 комментариев к постам других игроков.",
+            "trigger_type": "community_comments_on_others_posts",
+            "trigger_config": {"min": 25},
+        },
+        {
+            "slug": "difficulty_1_all",
+            "category": "progression",
+            "name": "Рядовой решатель",
+            "description": "Пройти все активные уровни сложности 1.",
+            "trigger_type": "all_levels_difficulty_completed",
+            "trigger_config": {"difficulty": 1},
+        },
+        {
+            "slug": "difficulty_2_all",
+            "category": "progression",
+            "name": "Второй фронт задач",
+            "description": "Пройти все активные уровни сложности 2.",
+            "trigger_type": "all_levels_difficulty_completed",
+            "trigger_config": {"difficulty": 2},
+        },
+        {
+            "slug": "difficulty_3_all",
+            "category": "progression",
+            "name": "Третий круг алгоритмического ада",
+            "description": "Пройти все активные уровни сложности 3.",
+            "trigger_type": "all_levels_difficulty_completed",
+            "trigger_config": {"difficulty": 3},
+        },
+        {
+            "slug": "beat_golden_once",
+            "category": "efficiency",
+            "name": "Короче эталона",
+            "description": "Пройти любой уровень с меньшим числом шагов, чем в золотом решении.",
+            "trigger_type": "beat_golden_once",
+            "trigger_config": {},
+        },
+        {
+            "slug": "beat_golden_five",
+            "category": "efficiency",
+            "name": "Краткость, сестра таланта",
+            "description": "Пройти 5 разных уровней, каждый строго быстрее эталона.",
+            "trigger_type": "beat_golden_distinct",
+            "trigger_config": {"min_distinct": 5},
+        },
+        {
+            "slug": "golden_parity_once",
+            "category": "efficiency",
+            "name": "Начало пути совершенства",
+            "description": "Иметь хотя бы на одном уровне ровно столько шагов, сколько в эталоне, и финиш.",
+            "trigger_type": "golden_parity",
+            "trigger_config": {},
+        },
+        {
+            "slug": "no_loop_hard_once",
+            "category": "hardcore",
+            "name": "Прямая дорога",
+            "description": "Пройти один уровень сложности ≥2 без использования циклов (нц).",
+            "trigger_type": "no_loop_hard_once",
+            "trigger_config": {"min_difficulty": 2},
+        },
+        {
+            "slug": "linear_world_1_3",
+            "category": "hardcore",
+            "name": "Линейный мир",
+            "description": "Пройти все уровни сложности 1–3, ни разу не используя циклы в зачтённых прохождениях.",
+            "trigger_type": "all_difficulties_no_loop",
+            "trigger_config": {"difficulties": [1, 2, 3]},
+        },
+        {
+            "slug": "monolith_streak_10",
+            "category": "hardcore",
+            "name": "Монолит",
+            "description": "Пройти 10 уровней подряд по порядку (order) без циклов в зачтённых прохождениях.",
+            "trigger_type": "consecutive_no_loop_streak",
+            "trigger_config": {"min_levels": 10},
+        },
+    ]
+    for row in achievements:
+        if db.query(AchievementDefinition).filter(AchievementDefinition.slug == row["slug"]).first():
+            continue
+        db.add(AchievementDefinition(**row))
+    db.commit()
+
+    titles = [
+        {
+            "slug": "absolute_minimalist",
+            "name": "Абсолютный минималист",
+            "description": "Наименьшая сумма лучших шагов по всем уровням среди тех, кто прошёл весь активный контент.",
+            "holder_mode": "unique_transferable",
+            "max_holders": 1,
+            "leader_metric": "global_min_sum_best_steps_all_completed",
+            "metric_config": {},
+        },
+        {
+            "slug": "king_one_level",
+            "name": "Король одного уровня",
+            "description": "Минимальное число шагов на уровне с наибольшим порядком (босс-уровень).",
+            "holder_mode": "unique_transferable",
+            "max_holders": 1,
+            "leader_metric": "min_best_steps_on_boss_level",
+            "metric_config": {"boss_level": "max_order"},
+        },
+        {
+            "slug": "loops_weakness_title",
+            "name": "Циклы — оправдание слабости",
+            "description": "Минимальная сумма шагов по уровням сложности 1–3 без использования циклов во всех этих прохождениях.",
+            "holder_mode": "unique_transferable",
+            "max_holders": 1,
+            "leader_metric": "min_sum_best_no_loop_diff_1_3",
+            "metric_config": {},
+        },
+        {
+            "slug": "voice_of_the_people",
+            "name": "Глас народа",
+            "description": "Больше всего лайков на постах автора за последние 30 дней.",
+            "holder_mode": "unique_transferable",
+            "max_holders": 1,
+            "leader_metric": "max_post_likes_window_days",
+            "metric_config": {"days": 30},
+        },
+        {
+            "slug": "night_forum_guard",
+            "name": "Ночной страж форума",
+            "description": "Больше всего комментариев за последние 30 дней.",
+            "holder_mode": "unique_transferable",
+            "max_holders": 1,
+            "leader_metric": "max_comments_window_days",
+            "metric_config": {"days": 30},
+        },
+    ]
+    for row in titles:
+        existing = db.query(TitleDefinition).filter(TitleDefinition.slug == row["slug"]).first()
+        if existing:
+            tid = existing.id
+        else:
+            t = TitleDefinition(**row)
+            db.add(t)
+            db.flush()
+            tid = t.id
+        if not db.query(TitleHolderState).filter(TitleHolderState.title_id == tid).first():
+            db.add(TitleHolderState(title_id=tid, holder_user_id=None, since_at=None, metric_value=None))
+    db.commit()
+    print("✓ Достижения и титулы (каталог) проверены/созданы")
+
+
 def main():
     db = SessionLocal()
     
@@ -315,6 +491,7 @@ def main():
         print("Заполнение базы данных тестовыми данными...")
         seed_levels(db)
         seed_news(db)
+        seed_achievements_and_titles(db)
         print("\n✓ База данных успешно заполнена!")
     except Exception as e:
         print(f"Ошибка: {e}")

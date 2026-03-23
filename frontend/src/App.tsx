@@ -7,6 +7,7 @@ import LevelHub from './pages/LevelHub'
 import GamePlay from './pages/GamePlay'
 import Briefing from './pages/Briefing'
 import Profile from './pages/Profile'
+import PublicUserProfile from './pages/PublicUserProfile'
 import Settings from './pages/Settings'
 import AdminPanel from './pages/AdminPanel'
 import Community from './pages/Community'
@@ -80,6 +81,7 @@ function App() {
             }
           />
           <Route path="/community" element={<Community />} />
+          <Route path="/user/:username" element={<PublicUserProfile />} />
           <Route path="/games" element={<Games />} />
           <Route
             path="/admin"

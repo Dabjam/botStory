@@ -26,9 +26,17 @@ class User(Base):
     hint_word = Column(String(100), nullable=True)  # Одно слово-подсказка для всех уровней
     locale = Column(String(10), nullable=False, server_default="ru")
     terminal_theme = Column(String(20), nullable=False, server_default="linux")
-    
+    bio = Column(Text, nullable=True)
+    tagline = Column(String(120), nullable=True)
+    profile_preferences = Column(JSON, nullable=True)
+
     # Relationships
     level_progress = relationship("LevelProgress", back_populates="user", cascade="all, delete-orphan")
+    user_achievements = relationship("UserAchievement", back_populates="user", cascade="all, delete-orphan")
+    equipped_titles = relationship("UserEquippedTitle", back_populates="user", cascade="all, delete-orphan")
+    held_title_states = relationship(
+        "TitleHolderState", back_populates="holder", foreign_keys="TitleHolderState.holder_user_id"
+    )
     level_words = relationship("LevelWords", back_populates="user", cascade="all, delete-orphan")
     notes = relationship("Note", back_populates="user", cascade="all, delete-orphan")
     highlights = relationship("Highlight", back_populates="user", cascade="all, delete-orphan")
@@ -82,7 +90,8 @@ class LevelProgress(Base):
     
     attempts = Column(Integer, default=0)
     best_steps_count = Column(Integer)  # Лучший результат
-    
+    completed_ever_without_loops = Column(Boolean, default=False, nullable=False, server_default="false")
+
     completed_at = Column(DateTime)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
@@ -281,3 +290,127 @@ class CommunityPollVote(Base):
     user = relationship("User", back_populates="poll_votes")
     poll = relationship("CommunityPoll", back_populates="votes")
     option = relationship("CommunityPollOption", back_populates="votes")
+
+
+# --- Achievements & titles ---
+
+
+class AchievementCategory(str, enum.Enum):
+    SOCIAL = "social"
+    PROGRESSION = "progression"
+    EFFICIENCY = "efficiency"
+    HARDCORE = "hardcore"
+
+
+class AchievementTriggerType(str, enum.Enum):
+    COMMUNITY_LIKES_ON_OWN_POSTS = "community_likes_on_own_posts"
+    LEVEL_CHAT_MESSAGES = "level_chat_messages"
+    COMMUNITY_COMMENTS_ON_OTHERS_POSTS = "community_comments_on_others_posts"
+    ALL_LEVELS_DIFFICULTY_COMPLETED = "all_levels_difficulty_completed"
+    BEAT_GOLDEN_ONCE = "beat_golden_once"
+    BEAT_GOLDEN_DISTINCT = "beat_golden_distinct"
+    GOLDEN_PARITY = "golden_parity"
+    NO_LOOP_HARD_ONCE = "no_loop_hard_once"
+    ALL_DIFFICULTIES_NO_LOOP = "all_difficulties_no_loop"
+    CONSECUTIVE_NO_LOOP_STREAK = "consecutive_no_loop_streak"
+
+
+class TitleHolderMode(str, enum.Enum):
+    UNIQUE_TRANSFERABLE = "unique_transferable"
+    LIMITED_POOL = "limited_pool"
+
+
+class TitleLeaderMetric(str, enum.Enum):
+    GLOBAL_MIN_SUM_BEST_STEPS_ALL_COMPLETED = "global_min_sum_best_steps_all_completed"
+    MIN_BEST_STEPS_ON_BOSS_LEVEL = "min_best_steps_on_boss_level"
+    MIN_SUM_BEST_NO_LOOP_DIFF_1_3 = "min_sum_best_no_loop_diff_1_3"
+    MAX_POST_LIKES_WINDOW_DAYS = "max_post_likes_window_days"
+    MAX_COMMENTS_WINDOW_DAYS = "max_comments_window_days"
+
+
+class AchievementDefinition(Base):
+    __tablename__ = "achievement_definitions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    slug = Column(String(80), unique=True, nullable=False, index=True)
+    category = Column(String(32), nullable=False)
+    name = Column(String(200), nullable=False)
+    description = Column(Text, nullable=False)
+    icon_key = Column(String(64), nullable=True)
+    rarity = Column(String(32), nullable=True)
+    trigger_type = Column(String(64), nullable=False)
+    trigger_config = Column(JSON, nullable=True)
+    is_hidden = Column(Boolean, default=False, nullable=False, server_default="false")
+
+    user_achievements = relationship("UserAchievement", back_populates="achievement")
+
+
+class UserAchievement(Base):
+    __tablename__ = "user_achievements"
+    __table_args__ = (UniqueConstraint("user_id", "achievement_id", name="uq_user_achievement"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    achievement_id = Column(Integer, ForeignKey("achievement_definitions.id"), nullable=False)
+    earned_at = Column(DateTime, default=func.now(), nullable=False)
+    context = Column(JSON, nullable=True)
+
+    user = relationship("User", back_populates="user_achievements")
+    achievement = relationship("AchievementDefinition", back_populates="user_achievements")
+
+
+class TitleDefinition(Base):
+    __tablename__ = "title_definitions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    slug = Column(String(80), unique=True, nullable=False, index=True)
+    name = Column(String(200), nullable=False)
+    description = Column(Text, nullable=False)
+    holder_mode = Column(String(32), nullable=False)
+    max_holders = Column(Integer, nullable=False, server_default="1")
+    leader_metric = Column(String(64), nullable=False)
+    metric_config = Column(JSON, nullable=True)
+    icon_key = Column(String(64), nullable=True)
+
+    holder_state = relationship("TitleHolderState", back_populates="title", uselist=False)
+    equipped_by = relationship("UserEquippedTitle", back_populates="title")
+
+
+class TitleHolderState(Base):
+    __tablename__ = "title_holder_state"
+
+    title_id = Column(Integer, ForeignKey("title_definitions.id"), primary_key=True)
+    holder_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    since_at = Column(DateTime, nullable=True)
+    metric_value = Column(JSON, nullable=True)
+
+    title = relationship("TitleDefinition", back_populates="holder_state")
+    holder = relationship("User", back_populates="held_title_states", foreign_keys=[holder_user_id])
+
+
+class TitleHolderHistory(Base):
+    __tablename__ = "title_holder_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title_id = Column(Integer, ForeignKey("title_definitions.id"), nullable=False)
+    from_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    to_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    changed_at = Column(DateTime, default=func.now(), nullable=False)
+    reason = Column(String(64), nullable=True)
+    metric_value = Column(JSON, nullable=True)
+
+
+class UserEquippedTitle(Base):
+    __tablename__ = "user_equipped_titles"
+    __table_args__ = (
+        UniqueConstraint("user_id", "slot", name="uq_user_equipped_slot"),
+        UniqueConstraint("user_id", "title_id", name="uq_user_equipped_title"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    slot = Column(Integer, nullable=False)
+    title_id = Column(Integer, ForeignKey("title_definitions.id"), nullable=False)
+
+    user = relationship("User", back_populates="equipped_titles")
+    title = relationship("TitleDefinition", back_populates="equipped_by")

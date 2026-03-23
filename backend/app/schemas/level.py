@@ -61,6 +61,7 @@ class LevelProgressResponse(LevelProgressBase):
     steps_count: Optional[int] = None
     attempts: int
     best_steps_count: Optional[int] = None
+    completed_ever_without_loops: bool = False
     completed_at: Optional[datetime] = None
     created_at: datetime
     

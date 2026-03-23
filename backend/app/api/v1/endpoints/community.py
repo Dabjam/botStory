@@ -14,6 +14,7 @@ from app.schemas.community import (
     PollCreate, PollResponse, PollOptionResponse, PollVoteCreate,
 )
 from app.core.deps import get_current_user, get_optional_user
+from app.services.gamification_hooks import sync_gamification_for_users
 
 router = APIRouter()
 
@@ -160,6 +161,8 @@ async def like_post(
     else:
         db.add(CommunityPostLike(user_id=current_user.id, post_id=post_id))
     db.commit()
+    sync_gamification_for_users(db, post.author_id)
+    db.commit()
     return None
 
 
@@ -219,6 +222,8 @@ async def create_comment(
     db.add(comment)
     db.commit()
     db.refresh(comment)
+    sync_gamification_for_users(db, current_user.id)
+    db.commit()
     return CommentResponse(
         id=comment.id,
         post_id=comment.post_id,

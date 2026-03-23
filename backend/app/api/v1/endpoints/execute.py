@@ -7,6 +7,7 @@ from app.db.database import get_db
 from app.db.models import Level, User
 from app.core.deps import get_current_user
 from kumir.executor import KumirExecutor, ExecutionError
+from kumir.loop_detect import kumir_code_contains_loop
 
 router = APIRouter()
 
@@ -30,6 +31,7 @@ class ExecuteResponse(BaseModel):
     golden_steps_count: Optional[int] = None
     mine_history: Optional[List[tuple]] = None
     gates_history: Optional[List[Dict[str, bool]]] = None
+    used_loop_constructs: Optional[bool] = None
 
 
 @router.post("/", response_model=ExecuteResponse)
@@ -51,12 +53,13 @@ async def execute_code(
         # Create executor and run code
         executor = KumirExecutor(level.map_data)
         result = executor.execute(request.code)
-        
+        result["used_loop_constructs"] = kumir_code_contains_loop(request.code)
+
         # Compare with golden standard
         if result["success"] and result["reached_finish"]:
             result["golden_steps_count"] = level.golden_steps_count
             result["is_optimal"] = result["steps_count"] <= level.golden_steps_count
-        
+
         return ExecuteResponse(**result)
     
     except ExecutionError as e:

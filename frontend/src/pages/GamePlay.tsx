@@ -6,6 +6,8 @@ import CodeEditor from '../components/CodeEditor'
 import CodePanelTerminal from '../components/CodePanelTerminal'
 import LevelChat from '../components/LevelChat'
 import Debriefing from '../components/Debriefing'
+import { useAuthStore } from '../store/authStore'
+import { mergeProfilePreferences } from '../types/profile'
 import './GamePlay.css'
 
 const BODY_FULLSCREEN_CLASS = 'gameplay-fullscreen'
@@ -19,6 +21,9 @@ interface Level {
 }
 
 export default function GamePlay() {
+  const { user } = useAuthStore()
+  const compareToGolden =
+    mergeProfilePreferences(user?.profile_preferences).learning.show_golden_after_complete !== false
   const { id } = useParams()
   const navigate = useNavigate()
   const [level, setLevel] = useState<Level | null>(null)
@@ -143,7 +148,8 @@ export default function GamePlay() {
       <Debriefing
         levelId={level.id}
         result={executionResult}
-        goldenSteps={level.golden_steps_count}
+        goldenSteps={compareToGolden ? level.golden_steps_count : undefined}
+        compareToGolden={compareToGolden}
         progressSaveError={progressSaveError}
         onClose={() => navigate('/levels')}
         onRetry={() => { setShowDebriefing(false); setProgressSaveError(null) }}

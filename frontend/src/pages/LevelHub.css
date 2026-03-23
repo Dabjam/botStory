@@ -523,6 +523,28 @@
   box-shadow: 0 0 15px rgba(139, 126, 216, 0.3);
 }
 
+.level-hub--compact {
+  padding: 1rem 1.25rem;
+}
+
+.level-hub--compact h1 {
+  font-size: 2.25rem;
+  margin-bottom: 1.25rem;
+  letter-spacing: 3px;
+}
+
+.level-hub--compact .levels-grid {
+  gap: 1rem;
+}
+
+.level-hub--compact .level-card {
+  padding: 1rem 1.1rem;
+}
+
+.level-hub--compact .language-sections {
+  margin-bottom: 1.25rem;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .level-hub h1 {

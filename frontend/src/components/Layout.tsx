@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { mergeProfilePreferences } from '../types/profile'
 import { motion } from 'framer-motion'
 import './Layout.css'
 
@@ -19,8 +20,12 @@ export default function Layout() {
 
   const isActive = (path: string) => location.pathname === path
 
+  const reducedMotion = user
+    ? mergeProfilePreferences(user.profile_preferences).ui.reduced_motion
+    : false
+
   return (
-    <div className="layout">
+    <div className={`layout${reducedMotion ? ' layout--reduced-motion' : ''}`}>
       <motion.nav 
         className="navbar"
         initial={{ y: -100 }}

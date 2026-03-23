@@ -35,3 +35,4 @@ def test_execute_success_reaches_finish(client: TestClient, sample_level, auth_h
     assert data["reached_finish"] is True
     assert data["is_optimal"] is True
     assert data["golden_steps_count"] == 5
+    assert data.get("used_loop_constructs") is False

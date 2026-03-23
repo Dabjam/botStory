@@ -1,6 +1,8 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { levelAPI, userAPI } from '../services/api'
+import { useAuthStore } from '../store/authStore'
+import { mergeProfilePreferences } from '../types/profile'
 import { motion } from 'framer-motion'
 import './LevelHub.css'
 
@@ -23,6 +25,10 @@ const LANGUAGE_SECTIONS = [
 ] as const
 
 export default function LevelHub() {
+  const { user } = useAuthStore()
+  const compactHub = user
+    ? mergeProfilePreferences(user.profile_preferences).ui.compact_level_hub
+    : false
   const [levels, setLevels] = useState<Level[]>([])
   const [progressMap, setProgressMap] = useState<Record<number, { completed: boolean; best_steps_count?: number | null }>>({})
   const [loading, setLoading] = useState(true)
@@ -82,7 +88,7 @@ export default function LevelHub() {
   const isKumir = activeSection === 'kumir'
 
   return (
-    <div className="level-hub">
+    <div className={`level-hub${compactHub ? ' level-hub--compact' : ''}`}>
       <motion.h1
         initial={{ opacity: 0, y: -30 }}
         animate={{ opacity: 1, y: 0 }}

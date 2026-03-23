@@ -56,7 +56,17 @@ export const userAPI = {
   getProfile: () => api.get('/users/me'),
   getStats: () => api.get<{ completed: number; total: number; progress_percent: number }>('/users/me/stats'),
   getLevelProgress: () => api.get<{ level_id: number; completed: boolean; best_steps_count?: number | null }[]>('/users/me/progress'),
-  updateProfile: (data: any) => api.patch('/users/me', data),
+  updateProfile: (data: Record<string, unknown>) => api.patch('/users/me', data),
+  getPublicProfile: (username: string) =>
+    api.get(`/users/${encodeURIComponent(username)}/public`),
+}
+
+export const gamificationAPI = {
+  getMyAchievements: () => api.get('/me/achievements'),
+  getEquippedTitles: () => api.get('/me/equipped-titles'),
+  setEquippedTitles: (body: { slot1_title_id?: number | null; slot2_title_id?: number | null }) =>
+    api.put('/me/equipped-titles', body),
+  getTitlesLeaderboard: () => api.get('/titles/leaderboard'),
 }
 
 // Level API

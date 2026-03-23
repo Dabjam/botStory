@@ -1,13 +1,31 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from typing import List
 from pydantic import BaseModel
 
 from app.db.database import get_db
-from app.db.models import User, Level, LevelProgress
-from app.schemas.user import UserResponse, UserUpdate
+from app.db.models import (
+    User,
+    Level,
+    LevelProgress,
+    UserAchievement,
+    AchievementDefinition,
+    TitleDefinition,
+    TitleHolderState,
+    TitleHolderHistory,
+    UserEquippedTitle,
+)
+from app.schemas.user import UserResponse, UserUpdate, build_user_response
 from app.core.deps import get_current_user, get_current_admin
 from app.core.security import get_password_hash
+from app.schemas.gamification import (
+    PublicUserProfileResponse,
+    PublicProfileAchievement,
+    PublicProfileTitle,
+    EquippedTitleSlotResponse,
+)
+from app.profile_prefs import merged_preferences, apply_preferences_patch
 
 router = APIRouter()
 
@@ -27,7 +45,7 @@ class LevelProgressItem(BaseModel):
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current user profile"""
-    return current_user
+    return build_user_response(current_user)
 
 
 @router.get("/me/stats", response_model=UserStatsResponse)
@@ -128,10 +146,160 @@ async def update_current_user(
         else:
             current_user.terminal_theme = val
 
+    if "bio" in update_data:
+        val = update_data["bio"]
+        if val is None or (isinstance(val, str) and not val.strip()):
+            current_user.bio = None
+        else:
+            s = val.strip() if isinstance(val, str) else str(val)
+            if len(s) > 500:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Bio must be at most 500 characters",
+                )
+            current_user.bio = s
+
+    if "tagline" in update_data:
+        val = update_data["tagline"]
+        if val is None or (isinstance(val, str) and not val.strip()):
+            current_user.tagline = None
+        else:
+            s = val.strip() if isinstance(val, str) else str(val)
+            if len(s) > 120:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Tagline must be at most 120 characters",
+                )
+            current_user.tagline = s
+
+    if "profile_preferences" in update_data and update_data["profile_preferences"] is not None:
+        patch = update_data["profile_preferences"]
+        if not isinstance(patch, dict):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="profile_preferences must be an object",
+            )
+        current_user.profile_preferences = apply_preferences_patch(
+            current_user.profile_preferences, patch
+        )
+
     db.commit()
     db.refresh(current_user)
-    
-    return current_user
+
+    return build_user_response(current_user)
+
+
+def _user_ever_held_title(db: Session, user_id: int, title_id: int) -> bool:
+    st = (
+        db.query(TitleHolderState)
+        .filter(
+            TitleHolderState.title_id == title_id,
+            TitleHolderState.holder_user_id == user_id,
+        )
+        .first()
+    )
+    if st:
+        return True
+    h = (
+        db.query(TitleHolderHistory)
+        .filter(
+            TitleHolderHistory.title_id == title_id,
+            or_(
+                TitleHolderHistory.to_user_id == user_id,
+                TitleHolderHistory.from_user_id == user_id,
+            ),
+        )
+        .first()
+    )
+    return h is not None
+
+
+@router.get("/{username}/public", response_model=PublicUserProfileResponse)
+async def get_public_profile(
+    username: str,
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    prefs = merged_preferences(user.profile_preferences)
+    priv = prefs.get("privacy") or {}
+    hide_stats = bool(priv.get("hide_stats_on_public"))
+    hide_ach = bool(priv.get("hide_achievements_on_public"))
+
+    total = db.query(Level).filter(Level.is_active == True).count()
+    completed = (
+        db.query(LevelProgress)
+        .filter(LevelProgress.user_id == user.id, LevelProgress.completed == True)
+        .count()
+    )
+    progress_pct = round((completed / total) * 100) if total and not hide_stats else None
+
+    earned_rows = (
+        db.query(UserAchievement, AchievementDefinition)
+        .join(AchievementDefinition, UserAchievement.achievement_id == AchievementDefinition.id)
+        .filter(UserAchievement.user_id == user.id)
+        .order_by(UserAchievement.earned_at.desc())
+        .all()
+    )
+    achievements_out = (
+        []
+        if hide_ach
+        else [
+            PublicProfileAchievement(
+                slug=ad.slug,
+                name=ad.name,
+                description=ad.description,
+                category=ad.category,
+                earned_at=ua.earned_at,
+            )
+            for ua, ad in earned_rows
+        ]
+    )
+    titles_rows = db.query(TitleDefinition).order_by(TitleDefinition.id).all()
+    titles_out: List[PublicProfileTitle] = []
+    for td in titles_rows:
+        st = db.query(TitleHolderState).filter(TitleHolderState.title_id == td.id).first()
+        holder_id = st.holder_user_id if st else None
+        titles_out.append(
+            PublicProfileTitle(
+                title_id=td.id,
+                slug=td.slug,
+                name=td.name,
+                description=td.description,
+                is_current_holder=(holder_id == user.id),
+                ever_held=_user_ever_held_title(db, user.id, td.id),
+            )
+        )
+    eq_rows = (
+        db.query(UserEquippedTitle, TitleDefinition)
+        .join(TitleDefinition, UserEquippedTitle.title_id == TitleDefinition.id)
+        .filter(UserEquippedTitle.user_id == user.id)
+        .order_by(UserEquippedTitle.slot)
+        .all()
+    )
+    by_slot = {r[0].slot: (r[0], r[1]) for r in eq_rows}
+    equipped: List[EquippedTitleSlotResponse] = []
+    for slot in (1, 2):
+        if slot in by_slot:
+            _, td = by_slot[slot]
+            equipped.append(
+                EquippedTitleSlotResponse(slot=slot, title_id=td.id, slug=td.slug, name=td.name)
+            )
+        else:
+            equipped.append(EquippedTitleSlotResponse(slot=slot, title_id=None, slug=None, name=None))
+    return PublicUserProfileResponse(
+        id=user.id,
+        username=user.username,
+        bio=(user.bio or None) if (user.bio and str(user.bio).strip()) else None,
+        tagline=(user.tagline or None) if (user.tagline and str(user.tagline).strip()) else None,
+        completed_levels=None if hide_stats else completed,
+        total_active_levels=None if hide_stats else total,
+        progress_percent=None if hide_stats else progress_pct,
+        achievements=achievements_out,
+        titles=titles_out,
+        equipped_titles=equipped,
+    )
 
 
 @router.get("/", response_model=List[UserResponse])
@@ -143,4 +311,4 @@ async def list_users(
 ):
     """List all users (admin only)"""
     users = db.query(User).offset(skip).limit(limit).all()
-    return users
+    return [build_user_response(u) for u in users]

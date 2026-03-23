@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { authAPI, userAPI } from '../services/api'
+import type { ProfilePreferences } from '../types/profile'
 
 /** Сообщения API → UI (покрыто unit-тестами). */
 export function authErrorToRu(detail: string | string[]): string {
@@ -24,6 +25,9 @@ interface User {
   hint_word?: string | null
   locale?: 'ru' | 'en' | string | null
   terminal_theme?: 'windows' | 'macos' | 'linux' | string | null
+  bio?: string | null
+  tagline?: string | null
+  profile_preferences?: ProfilePreferences | null
 }
 
 interface AuthState {
@@ -62,7 +66,18 @@ export const useAuthStore = create<AuthState>((set) => ({
       const userResponse = await userAPI.getProfile()
       set({ user: userResponse.data, isLoading: false })
     } catch (error: any) {
-      const raw = error.response?.data?.detail ?? 'Ошибка входа'
+      let raw: string | string[]
+      if (!error.response) {
+        raw =
+          'Сервер недоступен. Проверьте, что backend запущен и адрес API верный (VITE_API_URL / порт 8000).'
+      } else {
+        const d = error.response?.data?.detail
+        if (Array.isArray(d) && d.length > 0 && typeof d[0]?.msg === 'string') {
+          raw = d[0].msg
+        } else {
+          raw = d ?? 'Ошибка входа'
+        }
+      }
       const errorMessage = authErrorToRu(raw)
       set({ error: errorMessage, isLoading: false })
       throw error
